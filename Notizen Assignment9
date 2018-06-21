@@ -1,0 +1,57 @@
+Abstand zweier punkte
+dx = p1[0] -p2[0]
+sqrt(dx*dx + dy*dy)
+
+stepsize = length(vonstroke) / stepcount(evtl 64)
+liste iterieren:
+p1 = point[i] - point[i-1]
+neuer punkt, wenn über der länge der stepsize
+nx = p1[0] + ((stepsize - curpos) /d) * (pointlist[i][0]
+
+rotate:im Uhrzeigersinn:
+rot_matrix = matrix([[cos(anlge_rad), -sin(angle_rad), 0]
+([[sin(anlge_rad), -cos(angle_rad), 0]
+[0 ,0, 1]
+
+t1 = matrix([[1, 0, -center[0]]),
+([[0, 1, -center[0]]),
+([[0, 0, 1])
+
+t2 = matrix([[1, 0, center[0]]),
+([[0, 1, center[0]]),
+([[0, 0, 1])
+transform = t2 @ rot_matrix @t1
+
+centroid:
+xs, ys, = ( zip(*points))
+return(sum(sx) / len(xs), sum(ys)/len(ys))
+
+angle between(point, centroid):
+dx = centroid[0] - point[0]
+dy = centroid[1] - point[1]
+
+scale(points)
+normalize(points):
+points_new = resample(points)
+anlge = -angle between()
+transpose()
+s1 = normalize([(-1, 0), (0 ,-1), (1, 0), (0, 1)])
+calculete_similarity(sample, template):
+    dist_all = 0
+    for p1, p2 in zip(sample, template):
+        dist = abs(p1[0] - p2[0] + abs(p1[1] - p2[1])
+        dist_all += dist
+    return dist_all
+calcule_similarity(s1, normalize(dw.points))
+
+canvas implemetieren, zuerst die Maus implementieren, dann wiimote,
+normalisieren und in kasten von 100x100 größe verkleinern.
+
+
+
+
+
+
+assert(anlge_between((-10, -10), (0,0)) ==45.0
+
+
