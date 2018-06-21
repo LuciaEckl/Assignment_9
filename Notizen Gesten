@@ -1,0 +1,14 @@
+Qt Draw Widget
+point_list.insert
+
+matrizen bei rotieren
+cos und sin
+im Uhrzeigersinn
+rot_matrix = matrix([[cos(angle_rad, -sin())]])
+
+transform = t2 @ rot_matrix @ t1
+
+angle_between
+angle in degrees
+
+assert für wenn es gleich 45 is, passt es
