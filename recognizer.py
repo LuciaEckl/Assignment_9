@@ -8,6 +8,7 @@ import sys
 import numpy as np
 from PyQt5 import uic, QtWidgets, QtCore, QtGui, Qt
 from transform import Transform
+import math
 
 
 class Window(QtWidgets.QWidget):
@@ -18,6 +19,11 @@ class Window(QtWidgets.QWidget):
         self.mouseMovePos = (0, 0)
         self.draw = False
         self.coordinates = []
+        self.pointNumber = 255
+        self.pushButton = QtWidgets.QPushButton("Add Symbol")
+        self.addGestureButton = QtWidgets.QPushButton("Add gesture/symbol")
+        self.X = 0
+        self.Y = 0
         self.initUI()
 
 # making Boxlayouts within a boxlayout
@@ -29,7 +35,7 @@ class Window(QtWidgets.QWidget):
     def initUI(self):
 
         self.layout = QtWidgets.QVBoxLayout(self)
-        self.pushButton = QtWidgets.QPushButton("Add Symbol")
+
 
 
         self.dropdown = QtWidgets.QComboBox(self)
@@ -51,7 +57,7 @@ class Window(QtWidgets.QWidget):
         self.gestureInput = QtWidgets.QLineEdit()
         self.gestureInput.setPlaceholderText("Add symbol/gesture of type")
         self.addGestureLayout.addWidget(self.gestureInput)
-        self.addGestureButton = QtWidgets.QPushButton("Add gesture/symbol")
+
         self.addGestureLayout.addWidget(self.addGestureButton)
 
 
@@ -89,6 +95,8 @@ class Window(QtWidgets.QWidget):
     def mouseReleaseEvent(self, ev):
         print("release")
         self.draw = False
+        self.resample(self.coordinates, self.pointNumber)
+
 
     def mouseMoveEvent(self, ev):
         if self.draw is True:
@@ -111,10 +119,47 @@ class Window(QtWidgets.QWidget):
     def drawtarget(self, qp):
         qp.setBrush(QtGui.QColor(0, 200, 0))
         for i in range(len(self.coordinates) - 1):
+            print(self.coordinates)
             qp.drawLine(self.coordinates[i][0], self.coordinates[i][1], self.coordinates[i + 1][0], self.coordinates[i +1][1])
 
 
+    def resample(self, points, numberOfPoints):
+        intervalLength = self.pathLength(points) / (numberOfPoints -1)
+        d = 0.0
+        newpoints = [points[0]]
+        for i in range(1, len(points)):
+            distance = self.distance(points[i-1], points[i])
+            if((distance + d) >= intervalLength):
+                self.q = [0.0, 0.0]
+                qx = points[i-1][0] + ((intervalLength - d) / distance) * (points[i][0] - points[i-1][0])
+                qy = points[i-1][1] + ((intervalLength - d) / distance) * (points[i][1] - points[i-1][1])
+                self.q = self.point(qx, qy)
+                newpoints.append(self.q)
+                points.insert(i, 0, self.q)
+                d = 0.0
+            else:
+                d += distance
 
+        if len(newpoints) == numberOfPoints -1:
+            newpoints.append(points[0])
+
+        return newpoints
+
+
+    def point(self, x, y):
+        self.X = x
+        self.Y = y
+
+    def pathLength(self, points):
+        d = 0.0
+        for i in range(1, len(points)):
+            d += self.distance(points[i - 1], points[i])
+        return d
+
+    def distance(self, p1, p2):
+        dx = p2[0] - p1[0]
+        dy = p2[1] - p2[1]
+        return math.sqrt(dx * dx + dy * dy)
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
