@@ -1,0 +1,11 @@
+What does the recognizer do?
+The $P recognizer regocnizes the lines of gesture and represents them in point clouds, because of the many different ways to make one gesture.
+If you recognize the point clouds you don't have the order of the lines that were made and so it is possible to match different orders and numbers of lines to one gesture.
+
+
+Name an advantage of the $P recognizer over the $1 recognizer.
+An advantage is the time-free alignment of point clouds
+$1 has a time-ordered alignment that fails if the gesture is drawn backwards, for example if it is a spiral.
+
+
+What is the minimum matching distance?
