@@ -198,9 +198,9 @@ class Window(QtWidgets.QWidget):
             q[1] = (points[i][0] - centroid[0]) * sin + (points[i][1] - centroid[1]) * cos + centroid[1]
             newPoints = np.append(newPoints, [q], 0)
 
-     #   print("newpoints", newPoints, len(newPoints))
+        print("newpoints", newPoints, len(newPoints))
         self.drawNewPoints = True
-        return newPoints
+        return newPoints[1:]
 
 
     def scaleToSquare(self, points):
