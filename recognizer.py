@@ -88,6 +88,9 @@ class Window(QtWidgets.QWidget):
             QtCore.QPoint(self.start_pos[0], self.start_pos[0])))
         self.show()
 
+
+
+
     def mousePressEvent(self, ev):
         print("clicked")
         self.draw = True
@@ -95,6 +98,7 @@ class Window(QtWidgets.QWidget):
     def mouseReleaseEvent(self, ev):
         print("release")
         self.draw = False
+        print("relese", self.coordinates)
         self.resample(self.coordinates, self.pointNumber)
 
 
@@ -122,20 +126,22 @@ class Window(QtWidgets.QWidget):
             print(self.coordinates)
             qp.drawLine(self.coordinates[i][0], self.coordinates[i][1], self.coordinates[i + 1][0], self.coordinates[i +1][1])
 
-
     def resample(self, points, numberOfPoints):
-        intervalLength = self.pathLength(points) / (numberOfPoints -1)
+        intervalLength = self.pathLength(points) / float(numberOfPoints -1)
         d = 0.0
         newpoints = [points[0]]
+        newpoints.append(points[0])
         for i in range(1, len(points)):
-            distance = self.distance(points[i-1], points[i])
-            if((distance + d) >= intervalLength):
+            print("punkte", points[i-1], points[i])
+            distance = self.distance(points[i - 1], points[i])
+            print("distance", distance)
+            if distance + d >= intervalLength:
+                print("im if")
                 self.q = [0.0, 0.0]
-                qx = points[i-1][0] + ((intervalLength - d) / distance) * (points[i][0] - points[i-1][0])
-                qy = points[i-1][1] + ((intervalLength - d) / distance) * (points[i][1] - points[i-1][1])
-                self.q = self.point(qx, qy)
+                self.q[0] = points[i-1][0] + float((intervalLength - d) / distance) * (points[i][0] - points[i-1][0])
+                self.q[1] = points[i-1][1] + float((intervalLength - d) / distance) * (points[i][1] - points[i-1][1])
                 newpoints.append(self.q)
-                points.insert(i, 0, self.q)
+                points.insert(i, self.q)
                 d = 0.0
             else:
                 d += distance
@@ -143,6 +149,7 @@ class Window(QtWidgets.QWidget):
         if len(newpoints) == numberOfPoints -1:
             newpoints.append(points[0])
 
+        print(newpoints)
         return newpoints
 
 
@@ -153,13 +160,15 @@ class Window(QtWidgets.QWidget):
     def pathLength(self, points):
         d = 0.0
         for i in range(1, len(points)):
-            d += self.distance(points[i - 1], points[i])
+            d = d + self.distance(points[i - 1], points[i])
         return d
 
     def distance(self, p1, p2):
+        print("fehlersuche", p1, p2)
         dx = p2[0] - p1[0]
-        dy = p2[1] - p2[1]
-        return math.sqrt(dx * dx + dy * dy)
+        dy = p2[1] - p1[1]
+        return float(np.sqrt(dx * dx + dy * dy))
+
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
