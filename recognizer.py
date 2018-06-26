@@ -24,6 +24,7 @@ class Window(QtWidgets.QWidget):
         self.addGestureButton = QtWidgets.QPushButton("Add gesture/symbol")
         self.X = 0
         self.Y = 0
+        self.resampledPoints = []
         self.initUI()
 
 # making Boxlayouts within a boxlayout
@@ -99,7 +100,9 @@ class Window(QtWidgets.QWidget):
         print("release")
         self.draw = False
         print("relese", self.coordinates)
-        self.resample(self.coordinates, self.pointNumber)
+        self.resampledPoints = self.resample(self.coordinates, self.pointNumber)
+        self.rotateToZero(self.resampledPoints)
+
 
 
     def mouseMoveEvent(self, ev):
@@ -169,6 +172,18 @@ class Window(QtWidgets.QWidget):
         dy = p2[1] - p1[1]
         return float(np.sqrt(dx * dx + dy * dy))
 
+    def indicativeAngle(self, points):
+        centroid = np.mean(points,0)
+        rotation_angle = np.arctan2(centroid[1] - points[0][1], centroid[0]-points[0][0])
+        return rotation_angle
+
+    def rotateToZero(self, points):
+        rotation_angle = self.indicativeAngle(points)
+        newPoints = self.rotate2D(points, 0, -rotation_angle)
+        return newPoints
+
+    def rotate2D(self, points, count, ang=np.pi/4):
+        return np.dot(np.array(points)-count, np.array([[np.cos(ang), np.sin(ang)], [-np.sin(ang), np.cos(ang)]])) + count
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
