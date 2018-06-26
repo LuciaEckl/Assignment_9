@@ -27,7 +27,7 @@ class Window(QtWidgets.QWidget):
         self.resampledPoints = []
         self.square_size = 100
         self.drawNewPoints = False
-        self.newPointsToDraw = []
+        self.rotatedPoints = []
         self.initUI()
 
 # making Boxlayouts within a boxlayout
@@ -100,14 +100,12 @@ class Window(QtWidgets.QWidget):
         self.draw = True
 
     def mouseReleaseEvent(self, ev):
-        #print("release")
         self.draw = False
-        #print("relese", self.coordinates)
         self.resampledPoints = self.resample(self.coordinates, self.pointNumber)
         angle = self.indicativeAngle(self.resampledPoints)
         self.rotatedPoints = self.rotateBy(self.resampledPoints, -angle)
-        #print(self.newPointsToDraw)
-        self.drawNewPoints = True
+        self.update()
+
 
 
 
@@ -126,7 +124,7 @@ class Window(QtWidgets.QWidget):
             qp.begin(self)
             if self.draw is True:
                 self.drawtarget(qp)
-            if self.drawNewPoints is True:
+            elif self.drawNewPoints is True:
                 print("Draw is True")
                 self.drawNewTargetPoints(qp)
                 self.drawNewPoints = False
@@ -135,8 +133,8 @@ class Window(QtWidgets.QWidget):
 
     def drawNewTargetPoints(self, qp):
         qp.setBrush(QtGui.QColor(0, 200, 0))
-        for i in range(len(self.newPointsToDraw) - 1):
-            qp.drawLine(self.newPointsToDraw[i][0], self.newPointsToDraw[i][1], self.newPointsToDraw[i + 1][0], self.newPointsToDraw[i +1][1])
+        for i in range(len(self.rotatedPoints) - 1):
+            qp.drawLine(self.rotatedPoints[i][0], self.rotatedPoints[i][1], self.rotatedPoints[i + 1][0], self.rotatedPoints[i +1][1])
 
 
 
@@ -151,11 +149,8 @@ class Window(QtWidgets.QWidget):
         newpoints = [points[0]]
         newpoints.append(points[0])
         for i in range(1, len(points)):
-           # print("punkte", points[i-1], points[i])
             distance = self.distance(points[i - 1], points[i])
-           # print("distance", distance)
             if distance + d >= intervalLength:
-            #    print("im if")
                 self.q = [0.0, 0.0]
                 self.q[0] = points[i-1][0] + float((intervalLength - d) / distance) * (points[i][0] - points[i-1][0])
                 self.q[1] = points[i-1][1] + float((intervalLength - d) / distance) * (points[i][1] - points[i-1][1])
@@ -168,7 +163,6 @@ class Window(QtWidgets.QWidget):
         if len(newpoints) == numberOfPoints -1:
             newpoints.append(points[0])
 
-        print(len(newpoints), self.pointNumber)
         return newpoints
 
 
@@ -204,11 +198,9 @@ class Window(QtWidgets.QWidget):
             q[1] = (points[i][0] - centroid[0]) * sin + (points[i][1] - centroid[1]) * cos + centroid[1]
             newPoints = np.append(newPoints, [q], 0)
 
-        print("newpoints", newPoints)
+     #   print("newpoints", newPoints, len(newPoints))
+        self.drawNewPoints = True
         return newPoints
-
-    def rotate2D(self, points, count, ang=np.pi/4):
-        return np.dot(np.array(points)-count, np.array([[np.cos(ang), np.sin(ang)], [-np.sin(ang), np.cos(ang)]])) + count
 
 
     def scaleToSquare(self, points):
