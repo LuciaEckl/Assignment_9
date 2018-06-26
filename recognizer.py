@@ -28,6 +28,9 @@ class Window(QtWidgets.QWidget):
         self.square_size = 100
         self.drawNewPoints = False
         self.rotatedPoints = []
+        self.scale = []
+        self.origin = (100,100)
+        self.toOrigin = []
         self.initUI()
 
 # making Boxlayouts within a boxlayout
@@ -104,6 +107,8 @@ class Window(QtWidgets.QWidget):
         self.resampledPoints = self.resample(self.coordinates, self.pointNumber)
         angle = self.indicativeAngle(self.resampledPoints)
         self.rotatedPoints = self.rotateBy(self.resampledPoints, -angle)
+        self.scale = self.scaleToSquare(self.rotatedPoints)
+        self.toOrigin = self.translateTo(self.scale, self.origin)
         self.update()
 
 
@@ -133,13 +138,14 @@ class Window(QtWidgets.QWidget):
 
     def drawNewTargetPoints(self, qp):
         qp.setBrush(QtGui.QColor(0, 200, 0))
-        for i in range(len(self.rotatedPoints) - 1):
-            qp.drawLine(self.rotatedPoints[i][0], self.rotatedPoints[i][1], self.rotatedPoints[i + 1][0], self.rotatedPoints[i +1][1])
+        for i in range(len(self.toOrigin) - 1):
+            qp.drawLine(self.toOrigin[i][0], self.toOrigin[i][1], self.toOrigin[i + 1][0], self.toOrigin[i +1][1])
 
 
 
     def drawtarget(self, qp):
         qp.setBrush(QtGui.QColor(0, 200, 0))
+        print(len(self.coordinates))
         for i in range(len(self.coordinates) - 1):
             qp.drawLine(self.coordinates[i][0], self.coordinates[i][1], self.coordinates[i + 1][0], self.coordinates[i +1][1])
 
@@ -163,7 +169,7 @@ class Window(QtWidgets.QWidget):
         if len(newpoints) == numberOfPoints -1:
             newpoints.append(points[0])
 
-        return newpoints
+        return points
 
 
     def point(self, x, y):
@@ -198,8 +204,7 @@ class Window(QtWidgets.QWidget):
             q[1] = (points[i][0] - centroid[0]) * sin + (points[i][1] - centroid[1]) * cos + centroid[1]
             newPoints = np.append(newPoints, [q], 0)
 
-        print("newpoints", newPoints, len(newPoints))
-        self.drawNewPoints = True
+
         return newPoints[1:]
 
 
@@ -214,11 +219,32 @@ class Window(QtWidgets.QWidget):
             q[0] = point[0] * (self.square_size / b_width)
             q[1] = point[1] * (self.square_size / b_height)
             new_points = np.append(new_points, [q], 0)
+        self.drawNewPoints = True
         return new_points[1:]
 
     def centroid(self, points):
         centroid = np.mean(points,0)
         return centroid
+
+
+
+    def translateTo(self, points, origin):
+
+        centroid = self.centroid(points)
+        newpoints = np.zeros((1, 2))
+        print(len(points), "lenpoints")
+        for i in range(len(points)):
+         #   print("Test", points, points[0], points[1], origin[0], centroid[0])
+            q = np.array([0.0, 0.0])
+            q[0] = points[i][0] + origin[0] - centroid[0]
+            q[1] = points[i][1] + origin[1] - centroid[1]
+            newpoints = np.append(newpoints, [q], 0)
+            #print("Translate", newpoints)
+        #self.drawNewPoints = True
+        return newpoints[1:]
+
+
+
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
