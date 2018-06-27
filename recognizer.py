@@ -20,8 +20,6 @@ class Window(QtWidgets.QWidget):
         self.draw = False
         self.coordinates = []
         self.pointNumber = 64
-        self.pushButton = QtWidgets.QPushButton("Add Symbol")
-        self.addGestureButton = QtWidgets.QPushButton("Add gesture/symbol")
         self.X = 0
         self.Y = 0
         self.resampledPoints = []
@@ -31,6 +29,10 @@ class Window(QtWidgets.QWidget):
         self.scale = []
         self.origin = (100,100)
         self.toOrigin = []
+        self.addNewDefinedGetureButtonText = "Add gesture/symbol"
+        self.addExistingGestureButtonText = "Add Symbol"
+        self.gestureInputText = ""
+        self.dropdown = ""
         self.initUI()
 
 # making Boxlayouts within a boxlayout
@@ -47,6 +49,8 @@ class Window(QtWidgets.QWidget):
 
         self.dropdown = QtWidgets.QComboBox(self)
         self.exampleText = QtWidgets.QLabel(self)
+        self.pushButton = QtWidgets.QPushButton(self.addExistingGestureButtonText)
+        self.addGestureButton = QtWidgets.QPushButton(self.addNewDefinedGetureButtonText)
         self.exampleText.setText("Add example of type")
         self.addExamplelayout = QtWidgets.QHBoxLayout()
         self.addExamplelayout.addWidget(self.exampleText)
@@ -55,6 +59,7 @@ class Window(QtWidgets.QWidget):
         self.dropdown.addItem("Circle")
         self.addExamplelayout.addWidget(self.dropdown)
         self.addExamplelayout.addWidget(self.pushButton)
+        self.pushButton.clicked.connect(self.clickedButton)
 
 
         self.addGestureText = QtWidgets.QLabel(self)
@@ -63,9 +68,11 @@ class Window(QtWidgets.QWidget):
         self.addGestureLayout.addWidget(self.addGestureText)
         self.gestureInput = QtWidgets.QLineEdit()
         self.gestureInput.setPlaceholderText("Add symbol/gesture of type")
+
         self.addGestureLayout.addWidget(self.gestureInput)
 
         self.addGestureLayout.addWidget(self.addGestureButton)
+        self.addGestureButton.clicked.connect(self.clickedButton)
 
 
 
@@ -95,11 +102,27 @@ class Window(QtWidgets.QWidget):
             QtCore.QPoint(self.start_pos[0], self.start_pos[0])))
         self.show()
 
+    def clickedButton(self, ev):
+        sender = self.sender()
+        print(self.gestureInput.text())
+        if sender.text() == self.addExistingGestureButtonText:
+            # hier soll die Geste zu den bestehenden Kategrorien in der Dropdownliste Hinzugefügt werden
+            print("Geste zu bestehender Kategorie hinzufügen")
+
+        if (sender.text() == self.addNewDefinedGetureButtonText) and (len(self.gestureInput.text()) > 0):
+            # die neu Erstellte Kategorie in die Dropdownliste hinzufügen
+            # die neue Geste zu der neuen Kategorie anlegen
+            #self.dropdown.addItem("Geschaft")
+            # text aus dem Textfeld rausholen mit self.gestureInput.text()
+            # hinzufügen der neuen Kategrie in die Dropdownliste
+            self.dropdown.addItem(self.gestureInput.text())
+            print("Neue Kategorie hinzufügen")
 
 
 
     def mousePressEvent(self, ev):
-        #print("clicked")
+        self.coordinates = []
+        self.update()
         self.draw = True
 
     def mouseReleaseEvent(self, ev):
@@ -124,13 +147,13 @@ class Window(QtWidgets.QWidget):
 
 
 
+
     def paintEvent(self, event):
             qp = QtGui.QPainter()
             qp.begin(self)
             if self.draw is True:
                 self.drawtarget(qp)
             elif self.drawNewPoints is True:
-                print("Draw is True")
                 self.drawNewTargetPoints(qp)
                 self.drawNewPoints = False
 
@@ -145,12 +168,11 @@ class Window(QtWidgets.QWidget):
 
     def drawtarget(self, qp):
         qp.setBrush(QtGui.QColor(0, 200, 0))
-        print(len(self.coordinates))
         for i in range(len(self.coordinates) - 1):
             qp.drawLine(self.coordinates[i][0], self.coordinates[i][1], self.coordinates[i + 1][0], self.coordinates[i +1][1])
 
     def resample(self, points, numberOfPoints):
-        intervalLength = self.pathLength(points) / float(numberOfPoints -1)
+        intervalLength = float(self.pathLength(points) / float(numberOfPoints -1))
         d = 0.0
         newpoints = [points[0]]
         newpoints.append(points[0])
@@ -183,7 +205,6 @@ class Window(QtWidgets.QWidget):
         return d
 
     def distance(self, p1, p2):
-      #  print("fehlersuche", p1, p2)
         dx = p2[0] - p1[0]
         dy = p2[1] - p1[1]
         return float(np.sqrt(dx * dx + dy * dy))
@@ -219,7 +240,7 @@ class Window(QtWidgets.QWidget):
             q[0] = point[0] * (self.square_size / b_width)
             q[1] = point[1] * (self.square_size / b_height)
             new_points = np.append(new_points, [q], 0)
-        self.drawNewPoints = True
+
         return new_points[1:]
 
     def centroid(self, points):
@@ -240,7 +261,7 @@ class Window(QtWidgets.QWidget):
             q[1] = points[i][1] + origin[1] - centroid[1]
             newpoints = np.append(newpoints, [q], 0)
             #print("Translate", newpoints)
-        #self.drawNewPoints = True
+        self.drawNewPoints = True
         return newpoints[1:]
 
 
