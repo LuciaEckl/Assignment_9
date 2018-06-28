@@ -161,9 +161,9 @@ class Window(QtWidgets.QWidget):
     def resultClicked(self, ev):
         # Wir müssen noch abfragen, ob schon eine Geste Trainiert wurde
         if len(self.points) > 0 and len(self.gestures) > 0:
-            self.prediction()
             self.category = self.recognize(self.points, self.gestures)
             self.category = sorted(self.category, key=itemgetter(0))[0][1]
+            self.prediction()
             print(self.category)
         elif len(self.points) == 0:
             self.resultOutputText.setText("no Gesture found")
@@ -236,12 +236,12 @@ class Window(QtWidgets.QWidget):
 
     def mouseReleaseEvent(self, ev):
         self.draw = False
-        self.resampledPoints = self.resample(self.coordinates, self.pointNumber)
-        angle = self.indicativeAngle(self.resampledPoints)
-        self.rotatedPoints = self.rotateBy(self.resampledPoints, -angle)
-        self.scale = self.scaleToSquare(self.rotatedPoints)
-        self.toOrigin = self.translateTo(self.scale, self.origin)
-        self.points = self.toOrigin
+        self.points = self.resample(self.coordinates, self.pointNumber)
+        angle = self.indicativeAngle(self.points)
+        self.points = self.rotateBy(self.points, -angle)
+        self.points = self.scaleToSquare(self.points)
+        self.points = self.translateTo(self.points, self.origin)
+        self.points = self.points
         self.update()
 
 
@@ -331,26 +331,30 @@ class Window(QtWidgets.QWidget):
         return d/len(pts1)
 
     def resample(self, points, numberOfPoints):
-        intervalLength = float(self.pathLength(points) / float(numberOfPoints -1))
-        d = 0.0
+        intervalLength = self.pathLength(points) / float(numberOfPoints -1)
+        D = 0.0
         newpoints = [points[0]]
        # newpoints.append(points[0])
         i = 1
         while i < len(points):
-            distance = self.distance(points[i - 1], points[i])
-            if distance + d >= intervalLength:
+            point = points[i -1]
+            next_point = points[i]
+            d = self.distance(point, next_point)
+            if d + D >= intervalLength:
+                delta_distance = float((intervalLength - D) / d)
                 self.q = [0.0, 0.0]
-                self.q[0] = points[i-1][0] + float((intervalLength - d) / distance) * (points[i][0] - points[i-1][0])
-                self.q[1] = points[i-1][1] + float((intervalLength - d) / distance) * (points[i][1] - points[i-1][1])
+                self.q[0] = points[i-1][0] + delta_distance * (points[i][0] - points[i-1][0])
+                self.q[1] = points[i-1][1] + delta_distance * (points[i][1] - points[i-1][1])
                 newpoints.append(self.q)
                 points.insert(i, self.q)
-                d = 0.0
+                D = 0.0
             else:
-                d += distance
+                D += d
             i +=1
 
         if len(newpoints) == numberOfPoints -1:
             newpoints.append(points[-1])
+
         return newpoints
 
 
@@ -376,6 +380,7 @@ class Window(QtWidgets.QWidget):
 
     def rotateBy(self, points, radians):
         centroid = self.centroid(points)
+
         cos = math.cos(radians)
         sin = math.sin(radians)
         newPoints = []
@@ -383,6 +388,7 @@ class Window(QtWidgets.QWidget):
             #q = [0.0, 0.0]
             qx = (points[i][0] - centroid[0]) * cos - (points[i][1] - centroid[1]) * sin + centroid[0]
             qy = (points[i][0] - centroid[0]) * sin + (points[i][1] - centroid[1]) * cos + centroid[1]
+
             newPoints.append([qx, qy])
 
 
@@ -390,34 +396,61 @@ class Window(QtWidgets.QWidget):
 
 
     def scaleToSquare(self, points):
-        minX = float(math.inf)
-        maxX = float(-math.inf)
-        minY = float(math.inf)
-        maxY = float(-math.inf)
+        b = self.boundingBox(points)
+        newpoints = []
+        for i in range(len(points)):
+            qx = points[i][0] * (self.square_size / b[2])
+            qy = points[i][1] * (self.square_size / b[3])
+            newpoints.append([qx, qy])
+        return newpoints
 
+    #    minX = float(math.inf)
+    #    maxX = float(-math.inf)
+    #    minY = float(math.inf)
+    #    maxY = float(-math.inf)
+
+    #    for i in range(len(points)):
+    #        minX = min(minX, points[i][0])
+    #        minY = min(minY, points[i][1])
+     #       maxX = max(maxX, points[i][0])
+     #       maxY = max(maxY, points[i][1])
+     #   new_points = []
+      #  b_width = maxX - minX
+      #  b_height = maxY - minY
+      #  for point in points:
+      #      #q = [0.0, 0.0]
+      #      qx = point[0] * (self.square_size / b_width)
+       #     qy = point[1] * (self.square_size / b_height)
+       #     new_points.append([qx, qy])
+
+     #   return new_points[1:]
+
+    def boundingBox(self, points):
+        minX = +math.inf
+        maxX = -math.inf
+        minY = +math.inf
+        maxY = -math.inf
         for i in range(len(points)):
             minX = min(minX, points[i][0])
             minY = min(minY, points[i][1])
             maxX = max(maxX, points[i][0])
             maxY = max(maxY, points[i][1])
-        new_points = []
-        b_width = maxX - minX
-        b_height = maxY - minY
-        for point in points:
-            #q = [0.0, 0.0]
-            qx = point[0] * (self.square_size / b_width)
-            qy = point[1] * (self.square_size / b_height)
-            new_points.append([qx, qy])
 
-        return new_points[1:]
-
+        return [minX, minY, maxX - minX, maxY - minY]
 
     def centroid(self, points):
-        #centroid = np.mean(points,0)
-        xs, ys = zip(*points)
+        #xs, ys = zip(*points)
 
-        return (sum(xs) / len(xs), sum(ys) / len(ys))
+        #return [sum(xs) / len(xs), sum(ys) / len(ys)]
+        x = 0.0
+        y = 0.0
+        for i in range(len(points)):
+            x += points[i][0]
+            y += points[i][1]
 
+        x = x / len(points)
+        y = y / len(points)
+        return [x, y]
 
 
     def translateTo(self, points, origin):
