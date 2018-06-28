@@ -9,6 +9,7 @@ import numpy as np
 from PyQt5 import uic, QtWidgets, QtCore, QtGui, Qt
 from transform import Transform
 import math
+from operator import itemgetter
 
 
 class Window(QtWidgets.QWidget):
@@ -31,10 +32,19 @@ class Window(QtWidgets.QWidget):
         self.toOrigin = []
         self.addNewDefinedGetureButtonText = "Add gesture/symbol"
         self.addExistingGestureButtonText = "Add Symbol"
+        self.resultButtonText = "Result"
         self.gestureInputText = ""
         self.dropdown = ""
         self.points = []
         self.transform = Transform()
+        self.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.gestures = []
+        self.gestureName = []
+        self.gestureInput = ""
+        self.resultOutputText = ""
+        self.angle_range = 45
+        self.angle_step = 2.0
+        self.category = -1
         self.initUI()
 
 
@@ -54,6 +64,7 @@ class Window(QtWidgets.QWidget):
         self.exampleText = QtWidgets.QLabel(self)
         self.pushButton = QtWidgets.QPushButton(self.addExistingGestureButtonText)
         self.addGestureButton = QtWidgets.QPushButton(self.addNewDefinedGetureButtonText)
+        self.resultButton = QtWidgets.QPushButton(self.resultButtonText)
         self.exampleText.setText("Add example of type")
         self.addExamplelayout = QtWidgets.QHBoxLayout()
         self.addExamplelayout.addWidget(self.exampleText)
@@ -63,13 +74,18 @@ class Window(QtWidgets.QWidget):
         self.addExamplelayout.addWidget(self.dropdown)
         self.addExamplelayout.addWidget(self.pushButton)
         self.pushButton.clicked.connect(self.clickedButton)
-
+        self.dropdown.activated.connect(self.getTextFromDropdown)
         self.addGestureText = QtWidgets.QLabel(self)
         self.addGestureText.setText("Add Gesture of type")
         self.addGestureLayout = QtWidgets.QHBoxLayout()
         self.addGestureLayout.addWidget(self.addGestureText)
-        self.gestureInput = QtWidgets.QLineEdit()
+        self.gestureInput = QtWidgets.QLineEdit("", self)
         self.gestureInput.setPlaceholderText("Add symbol/gesture of type")
+
+        self.gestureInput.selectAll()
+        self.gestureInput.setFocus()
+        #print(self.gestureInput.focusPolicy())
+
 
         self.addGestureLayout.addWidget(self.gestureInput)
 
@@ -83,9 +99,11 @@ class Window(QtWidgets.QWidget):
         self.resultText.setText("Result: ")
         self.resultOutputText = QtWidgets.QLabel(self)
         self.resultLayout = QtWidgets.QHBoxLayout()
+
         self.resultLayout.addWidget(self.resultText)
         self.resultLayout.addWidget(self.resultOutputText)
-
+        self.resultLayout.addWidget(self.resultButton)
+        self.resultButton.clicked.connect(self.resultClicked)
 
         self.addExamplelayout.setAlignment(QtCore.Qt.AlignBottom)
         self.addGestureLayout.setAlignment(QtCore.Qt.AlignBottom)
@@ -104,6 +122,10 @@ class Window(QtWidgets.QWidget):
             QtCore.QPoint(self.start_pos[0], self.start_pos[0])))
         self.show()
         #self.initWiimote()
+
+    def getTextFromDropdown(self):
+        self.gestureInput.selectAll()
+        self.gestureInput.setFocus()
 
     def initWiimote(self):
         super().__init__()
@@ -127,7 +149,6 @@ class Window(QtWidgets.QWidget):
                 leds.append((led["x"], led["y"]))
             P, DEST_W, DEST_H = (1024 /2, 768/2), 1024, 768
             try:
-            #print("dest", DEST_H)
                 # x,y = Transform.projective_transform(P, leds, DEST_W, DEST_H)
 
                 x, y = Transform().transform(P, leds, DEST_W, DEST_H)
@@ -137,15 +158,42 @@ class Window(QtWidgets.QWidget):
 
             QtGui.QCursor.setPos(self.mapToGlobal(QtCore.QPoint(x,y)))
 
+    def resultClicked(self, ev):
+        # Wir müssen noch abfragen, ob schon eine Geste Trainiert wurde
+        if len(self.points) > 0 and len(self.gestures) > 0:
+            self.prediction()
+            self.category = self.recognize(self.points, self.gestures)
+            self.category = sorted(self.category, key=itemgetter(0))[0][1]
+            print(self.category)
+        elif len(self.points) == 0:
+            self.resultOutputText.setText("no Gesture found")
+        elif len(self.gestures) == 0:
+            self.resultOutputText.setText("no Gestures trained")
+
 
     def clickedButton(self, ev):
         sender = self.sender()
-        print(self.gestureInput.text())
+        self.gestureInput.selectAll()
+        self.gestureInput.setFocus()
         if sender.text() == self.addExistingGestureButtonText:
             # hier soll die Geste zu den bestehenden Kategrorien in der Dropdownliste Hinzugefügt werden
             # aktueller Text der Dropdownliste self.dropdown.currentText()
-            print("Geste zu bestehender Kategorie hinzufügen", self.dropdown.currentText())
-            print(self.points)
+            # self.points ist das gekürzte Array
+           # print("Geste zu bestehender Kategorie hinzufügen", self.dropdown.currentText())
+            if self.dropdown.currentText() not in self.gestureName:
+                self.gestureName.append(self.dropdown.currentText())
+                self.gestures.append([self.points])
+            else:
+
+                index = self.gestureName.index(self.dropdown.currentText())
+
+                self.gestures[index].append(self.points)
+               # print("Index", index, self.gestures[index], len(self.gestures[index]), len(self.gestures))
+
+               # print(self.gestures, self.gestureName)
+
+
+
 
         if (sender.text() == self.addNewDefinedGetureButtonText) and (len(self.gestureInput.text()) > 0):
             # die neu Erstellte Kategorie in die Dropdownliste hinzufügen
@@ -153,19 +201,48 @@ class Window(QtWidgets.QWidget):
             #self.dropdown.addItem("Geschaft")
             # text aus dem Textfeld rausholen mit self.gestureInput.text()
             # hinzufügen der neuen Kategrie in die Dropdownliste
-            self.dropdown.addItem(self.gestureInput.text())
-            print("Neue Kategorie hinzufügen")
+
+          #  print("Neue Kategorie hinzufügen")
+          #  self.gestures.append([self.points])
+           # print(self.gestures, "Gesten", "länge Gesten", len(self.gestures))
+           # self.gestureName.append(self.gestureInput.text())
+            if self.gestureInput.text() not in self.gestureName:
+                self.gestureName.append(self.gestureInput.text())
+                self.gestures.append([self.points])
+                self.dropdown.addItem(self.gestureInput.text())
+            else:
+
+                index = self.gestureName.index(self.gestureInput.text())
+
+                self.gestures[index].append(self.points)
+            #    print("Index", index, self.gestures[index], len(self.gestures[index]), len(self.gestures))
+
+
+    def prediction(self):
+        print("predict")
+        result = self.gestureName[self.category]
+        self.resultOutputText.setText(result)
 
 
 
     def mousePressEvent(self, ev):
         self.coordinates = []
+        #self.gestureInput.selectAll()
+        #self.gestureInput.setFocus()
         self.update()
+        self.gestureInput.selectAll()
+        self.gestureInput.setFocus()
         self.draw = True
 
     def mouseReleaseEvent(self, ev):
         self.draw = False
-        self.recognize()
+        self.resampledPoints = self.resample(self.coordinates, self.pointNumber)
+        angle = self.indicativeAngle(self.resampledPoints)
+        self.rotatedPoints = self.rotateBy(self.resampledPoints, -angle)
+        self.scale = self.scaleToSquare(self.rotatedPoints)
+        self.toOrigin = self.translateTo(self.scale, self.origin)
+        self.points = self.toOrigin
+        self.update()
 
 
 
@@ -205,22 +282,61 @@ class Window(QtWidgets.QWidget):
             qp.drawLine(self.coordinates[i][0], self.coordinates[i][1], self.coordinates[i + 1][0], self.coordinates[i +1][1])
 
 
-    def recognize(self):
-        self.resampledPoints = self.resample(self.coordinates, self.pointNumber)
-        angle = self.indicativeAngle(self.resampledPoints)
-        self.rotatedPoints = self.rotateBy(self.resampledPoints, -angle)
-        self.scale = self.scaleToSquare(self.rotatedPoints)
-        self.toOrigin = self.translateTo(self.scale, self.origin)
-        self.points = self.toOrigin
-        self.update()
+    def recognize(self, points, templates):
+        b = math.inf
+        selected_template = None
+        resultArray = []
+        for i in range(len(templates)):
+            for j in range(len(templates[i])):
+                #print(templates[i][j], len(templates), len(templates[i][j]))
+                d = self.distanceAtBestAngle(points, templates[i][j], -self.angle_range, self.angle_range, self.angle_step)
+                if(d < b):
+                    b = d
+                    print("D", d, i, j)
+                    resultArray.append([d, i])
 
+        return resultArray
+
+    def distanceAtBestAngle(self, points, T, a, b, threshold):
+        phi = (-1 + 5**0.5)/2
+        x1 = phi * a + (1.0 - phi) * b
+        f1 = self.distanceAtAngle(points, T, x1)
+        x2 = (1.0 - phi) * a + phi * b
+        f2 = self.distanceAtAngle(points, T, x2)
+        while (abs(b - a) > threshold):
+            if f1 < f2:
+                b = x2
+                x2 = x1
+                f2 = f1
+                x1 = phi * a + (1.0 - phi) * b
+                f1 = self.distanceAtAngle(points, T, x1)
+            else:
+                a = x1
+                x1 = x2
+                f1 = f2
+                x2 = (1.0 - phi) * a + phi * b
+                f2 = self.distanceAtAngle(points, T, x2)
+        return min(f1, f2)
+            #int(f1 if f1 < f2 else f2)
+
+    def distanceAtAngle(self, points, T, radians):
+        newpoints = self.rotateBy(points, radians)
+        return self.pathDistance(newpoints, T)
+
+
+    def pathDistance(self, pts1, pts2):
+        d = 0.0
+        for i in range(len(pts1)):
+            d += self.distance(pts1[i], pts2[i])
+        return d/len(pts1)
 
     def resample(self, points, numberOfPoints):
         intervalLength = float(self.pathLength(points) / float(numberOfPoints -1))
         d = 0.0
         newpoints = [points[0]]
-        newpoints.append(points[0])
-        for i in range(1, len(points)):
+       # newpoints.append(points[0])
+        i = 1
+        while i < len(points):
             distance = self.distance(points[i - 1], points[i])
             if distance + d >= intervalLength:
                 self.q = [0.0, 0.0]
@@ -231,11 +347,11 @@ class Window(QtWidgets.QWidget):
                 d = 0.0
             else:
                 d += distance
+            i +=1
 
         if len(newpoints) == numberOfPoints -1:
-            newpoints.append(points[0])
-
-        return points
+            newpoints.append(points[-1])
+        return newpoints
 
 
     def point(self, x, y):
@@ -245,68 +361,75 @@ class Window(QtWidgets.QWidget):
     def pathLength(self, points):
         d = 0.0
         for i in range(1, len(points)):
-            d = d + self.distance(points[i - 1], points[i])
+            d += self.distance(points[i - 1], points[i])
         return d
 
     def distance(self, p1, p2):
         dx = p2[0] - p1[0]
         dy = p2[1] - p1[1]
-        return float(np.sqrt(dx * dx + dy * dy))
+        return float(math.sqrt(dx * dx + dy * dy))
 
     def indicativeAngle(self, points):
         centroid = self.centroid(points)
-        rotation_angle = np.arctan2(centroid[1] - points[0][1], centroid[0]-points[0][0])
+        rotation_angle = math.atan2(centroid[1] - points[0][1], centroid[0]-points[0][0])
         return rotation_angle
 
     def rotateBy(self, points, radians):
         centroid = self.centroid(points)
-        cos = np.cos(radians)
-        sin = np.sin(radians)
-        newPoints = np.zeros((1,2))
+        cos = math.cos(radians)
+        sin = math.sin(radians)
+        newPoints = []
         for i in range(len(points)):
-            q = np.array([0.0, 0.0])
-            q[0] = (points[i][0] - centroid[0]) * cos - (points[i][1] - centroid[1]) * sin + centroid[0]
-            q[1] = (points[i][0] - centroid[0]) * sin + (points[i][1] - centroid[1]) * cos + centroid[1]
-            newPoints = np.append(newPoints, [q], 0)
+            #q = [0.0, 0.0]
+            qx = (points[i][0] - centroid[0]) * cos - (points[i][1] - centroid[1]) * sin + centroid[0]
+            qy = (points[i][0] - centroid[0]) * sin + (points[i][1] - centroid[1]) * cos + centroid[1]
+            newPoints.append([qx, qy])
 
 
-        return newPoints[1:]
+        return newPoints
 
 
     def scaleToSquare(self, points):
-        maxX, maxY = np.max(points, 0)
-        minX, minY = np.min(points, 0)
+        minX = float(math.inf)
+        maxX = float(-math.inf)
+        minY = float(math.inf)
+        maxY = float(-math.inf)
+
+        for i in range(len(points)):
+            minX = min(minX, points[i][0])
+            minY = min(minY, points[i][1])
+            maxX = max(maxX, points[i][0])
+            maxY = max(maxY, points[i][1])
+        new_points = []
         b_width = maxX - minX
         b_height = maxY - minY
-        new_points = np.zeros((1,2))
         for point in points:
-            q = np.array([0.0, 0.0])
-            q[0] = point[0] * (self.square_size / b_width)
-            q[1] = point[1] * (self.square_size / b_height)
-            new_points = np.append(new_points, [q], 0)
+            #q = [0.0, 0.0]
+            qx = point[0] * (self.square_size / b_width)
+            qy = point[1] * (self.square_size / b_height)
+            new_points.append([qx, qy])
 
         return new_points[1:]
 
+
     def centroid(self, points):
-        centroid = np.mean(points,0)
-        return centroid
+        #centroid = np.mean(points,0)
+        xs, ys = zip(*points)
+
+        return (sum(xs) / len(xs), sum(ys) / len(ys))
 
 
 
     def translateTo(self, points, origin):
 
         centroid = self.centroid(points)
-        newpoints = np.zeros((1, 2))
-        print(len(points), "lenpoints")
+        newpoints = []
         for i in range(len(points)):
-         #   print("Test", points, points[0], points[1], origin[0], centroid[0])
-            q = np.array([0.0, 0.0])
-            q[0] = points[i][0] + origin[0] - centroid[0]
-            q[1] = points[i][1] + origin[1] - centroid[1]
-            newpoints = np.append(newpoints, [q], 0)
-            #print("Translate", newpoints)
+            qx = points[i][0] + origin[0] - centroid[0]
+            qy = points[i][1] + origin[1] - centroid[1]
+            newpoints.append([qx, qy])
         self.drawNewPoints = True
-        return newpoints[1:]
+        return newpoints
 
 
 
