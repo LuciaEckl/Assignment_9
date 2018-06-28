@@ -33,7 +33,10 @@ class Window(QtWidgets.QWidget):
         self.addExistingGestureButtonText = "Add Symbol"
         self.gestureInputText = ""
         self.dropdown = ""
+        self.points = []
+        self.transform = Transform()
         self.initUI()
+
 
 # making Boxlayouts within a boxlayout
 # https://stackoverflow.com/questions/49127653/align-every-widget-of-a-qhboxlayout-to-the-top-in-pyqt
@@ -60,7 +63,6 @@ class Window(QtWidgets.QWidget):
         self.addExamplelayout.addWidget(self.dropdown)
         self.addExamplelayout.addWidget(self.pushButton)
         self.pushButton.clicked.connect(self.clickedButton)
-
 
         self.addGestureText = QtWidgets.QLabel(self)
         self.addGestureText.setText("Add Gesture of type")
@@ -101,13 +103,49 @@ class Window(QtWidgets.QWidget):
         QtGui.QCursor.setPos(self.mapToGlobal(
             QtCore.QPoint(self.start_pos[0], self.start_pos[0])))
         self.show()
+        #self.initWiimote()
+
+    def initWiimote(self):
+        super().__init__()
+        self.wm = None
+        self.setGeometry(0, 0, 1280, 720)
+        self.connect_wiimote()
+        #self.show()
+
+
+    def connect_wiimote(self):
+        self.wm = wiimote.connect("B8:AE:6E:1B:AD:A0")
+
+        if self.wm is not None:
+            self.wm.ir.register_callback(self.process_wiimote_ir_data)
+
+    def process_wiimote_ir_data(self,event):
+        if len(event) == 4:
+            leds = []
+
+            for led in event:
+                leds.append((led["x"], led["y"]))
+            P, DEST_W, DEST_H = (1024 /2, 768/2), 1024, 768
+            try:
+            #print("dest", DEST_H)
+                # x,y = Transform.projective_transform(P, leds, DEST_W, DEST_H)
+
+                x, y = Transform().transform(P, leds, DEST_W, DEST_H)
+            except Exception as e:
+                print(e)
+                x = y = -1
+
+            QtGui.QCursor.setPos(self.mapToGlobal(QtCore.QPoint(x,y)))
+
 
     def clickedButton(self, ev):
         sender = self.sender()
         print(self.gestureInput.text())
         if sender.text() == self.addExistingGestureButtonText:
             # hier soll die Geste zu den bestehenden Kategrorien in der Dropdownliste Hinzugefügt werden
-            print("Geste zu bestehender Kategorie hinzufügen")
+            # aktueller Text der Dropdownliste self.dropdown.currentText()
+            print("Geste zu bestehender Kategorie hinzufügen", self.dropdown.currentText())
+            print(self.points)
 
         if (sender.text() == self.addNewDefinedGetureButtonText) and (len(self.gestureInput.text()) > 0):
             # die neu Erstellte Kategorie in die Dropdownliste hinzufügen
@@ -127,12 +165,7 @@ class Window(QtWidgets.QWidget):
 
     def mouseReleaseEvent(self, ev):
         self.draw = False
-        self.resampledPoints = self.resample(self.coordinates, self.pointNumber)
-        angle = self.indicativeAngle(self.resampledPoints)
-        self.rotatedPoints = self.rotateBy(self.resampledPoints, -angle)
-        self.scale = self.scaleToSquare(self.rotatedPoints)
-        self.toOrigin = self.translateTo(self.scale, self.origin)
-        self.update()
+        self.recognize()
 
 
 
@@ -161,8 +194,8 @@ class Window(QtWidgets.QWidget):
 
     def drawNewTargetPoints(self, qp):
         qp.setBrush(QtGui.QColor(0, 200, 0))
-        for i in range(len(self.toOrigin) - 1):
-            qp.drawLine(self.toOrigin[i][0], self.toOrigin[i][1], self.toOrigin[i + 1][0], self.toOrigin[i +1][1])
+        for i in range(len(self.points) - 1):
+            qp.drawLine(self.points[i][0], self.points[i][1], self.points[i + 1][0], self.points[i +1][1])
 
 
 
@@ -170,6 +203,17 @@ class Window(QtWidgets.QWidget):
         qp.setBrush(QtGui.QColor(0, 200, 0))
         for i in range(len(self.coordinates) - 1):
             qp.drawLine(self.coordinates[i][0], self.coordinates[i][1], self.coordinates[i + 1][0], self.coordinates[i +1][1])
+
+
+    def recognize(self):
+        self.resampledPoints = self.resample(self.coordinates, self.pointNumber)
+        angle = self.indicativeAngle(self.resampledPoints)
+        self.rotatedPoints = self.rotateBy(self.resampledPoints, -angle)
+        self.scale = self.scaleToSquare(self.rotatedPoints)
+        self.toOrigin = self.translateTo(self.scale, self.origin)
+        self.points = self.toOrigin
+        self.update()
+
 
     def resample(self, points, numberOfPoints):
         intervalLength = float(self.pathLength(points) / float(numberOfPoints -1))
