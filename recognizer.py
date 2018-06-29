@@ -116,24 +116,8 @@ class Window(QtWidgets.QWidget):
         self.resultLayout.addWidget(self.resultButton)
         self.resultButton.clicked.connect(self.resultClicked)
 
-        self.addGestureButtonValues.append(self.addGestureButton.pos().x())
-        self.addGestureButtonValues.append(self.addGestureButton.pos().y())
-        self.addGestureButtonValues.append(self.addGestureButton.width())
-        self.addGestureButtonValues.append(self.addGestureButton.height())
-        self.addSymbolButtonValues.append(self.pushButton.pos().x())
-        self.addSymbolButtonValues.append(self.pushButton.pos().y())
-        self.addSymbolButtonValues.append(self.pushButton.width())
-        self.addSymbolButtonValues.append(self.pushButton.height())
-        self.resultButtonValues.append(self.resultButton.pos().x())
-        self.resultButtonValues.append(self.resultButton.pos().y())
-        self.resultButtonValues.append(self.resultButton.width())
-        self.resultButtonValues.append(self.resultButton.height())
-        self.dropdownValue.append(self.dropdown.pos().x())
-        self.dropdownValue.append(self.dropdown.pos().y())
-        self.dropdownValue.append(self.dropdown.width())
-        self.dropdownValue.append(self.dropdown.height())
 
-        print(self.addGestureButton.pos())
+
 
         self.addExamplelayout.setAlignment(QtCore.Qt.AlignBottom)
         self.addGestureLayout.setAlignment(QtCore.Qt.AlignBottom)
@@ -146,10 +130,14 @@ class Window(QtWidgets.QWidget):
         self.layout.setAlignment(QtCore.Qt.AlignBottom)
 
 
+
+
         self.setGeometry(0, 0, 1280, 720)
         self.setWindowTitle('$1 Recognizer')
-        QtGui.QCursor.setPos(self.mapToGlobal(
-            QtCore.QPoint(self.start_pos[0], self.start_pos[0])))
+        QtGui.QCursor.setPos(self.mapToGlobal(QtCore.QPoint(self.start_pos[0], self.start_pos[0])))
+
+
+
         self.show()
 
 
@@ -173,8 +161,8 @@ class Window(QtWidgets.QWidget):
 
 
     def getpressedButton(self, ev):
-        x = QtGui.QCursor.pos().x()
-        y = QtGui.QCursor.pos().y()
+        x = self.cursor().pos().x()
+        y = self.cursor().pos().y()
         if self.wm.buttons["B"]:
             if self.draw is False:
                 self.coordinates = []
@@ -202,19 +190,41 @@ class Window(QtWidgets.QWidget):
                 self.checkDraw = False
 
         if self.wm.buttons["A"]:
-            print(x, self.resultButtonValues[0], self.resultButtonValues[2])
+            self.addGestureButtonValues.append(self.addGestureButton.pos().x())
+            self.addGestureButtonValues.append(self.addGestureButton.pos().y())
+            self.addGestureButtonValues.append(self.addGestureButton.width())
+            self.addGestureButtonValues.append(self.addGestureButton.height())
+            self.addGestureButtonValues.append(self.addGestureLayout.geometry().y())
+            self.addSymbolButtonValues.append(self.pushButton.pos().x())
+            self.addSymbolButtonValues.append(self.pushButton.pos().y())
+            self.addSymbolButtonValues.append(self.pushButton.width())
+            self.addSymbolButtonValues.append(self.pushButton.height())
+            self.addSymbolButtonValues.append(self.addExamplelayout.geometry().y())
+            self.resultButtonValues.append(self.resultButton.pos().x())
+            self.resultButtonValues.append(self.resultButton.pos().y())
+            self.resultButtonValues.append(self.resultButton.width())
+            self.resultButtonValues.append(self.resultButton.height())
+            self.resultButtonValues.append(self.resultLayout.geometry().y())
+            self.dropdownValue.append(self.dropdown.pos().x())
+            self.dropdownValue.append(self.dropdown.pos().y())
+            self.dropdownValue.append(self.dropdown.width())
+            self.dropdownValue.append(self.dropdown.height())
+
+
+
+            print(x, y, self.resultButtonValues)
            # self.addGestureButton.clicked.connect(self.clickedButton)
-            self.app.postEvent(self.addGestureButton, QtGui.QMouseEvent(QtGui.QMouseEvent.MouseButtonPress, QtCore.QPoint(x, y), QtCore.Qt.LeftButton, QtCore.Qt.NoButton, QtCore.Qt.NoModifier))
+            #self.app.postEvent(self.addGestureButton, QtGui.QMouseEvent(QtGui.QMouseEvent.MouseButtonPress, QtCore.QPoint(x, y), QtCore.Qt.LeftButton, QtCore.Qt.NoButton, QtCore.Qt.NoModifier))
             #self.resultButtonValues = []
             #self.addSymbolButtonValues = []
             #self.addGestureButtonValues = []
             #self.dropdownValue = []
             if x > self.resultButtonValues[0] and x < self.resultButtonValues[0] + self.resultButtonValues[2] and y > self.resultButtonValues[1] and y < self.resultButtonValues[1] + self.resultButtonValues[3]:
                 print("result")
-                self.resultClicked
+                self.resultClicked()
             if x > self.addSymbolButtonValues[0] and x < self.addSymbolButtonValues[0] + self.addSymbolButtonValues[2] and y > self.addSymbolButtonValues[1] and y < self.addSymbolButtonValues[1] + self.addSymbolButtonValues[3]:
                 print("addNewGesture")
-                self.pushButton
+                self.pushButton()
             if x > self.addGestureButtonValues[0] and x < self.addGestureButtonValues[0] + self.addGestureButtonValues[2] and y > self.addGestureButtonValues[1] and y < self.addGestureButtonValues[1] + self.addGestureButtonValues[3]:
                 print("Symbol")
                 self.addNewGesture()
@@ -237,14 +247,14 @@ class Window(QtWidgets.QWidget):
             try:
                 # x,y = Transform.projective_transform(P, leds, DEST_W, DEST_H)
 
-                x, y = Transform().transform(P, leds, DEST_W, DEST_H)
+                x, y = self.transform.transform(P, leds, DEST_W, DEST_H)
             except Exception as e:
                 print(e)
                 x = y = -1
 
-            QtGui.QCursor.setPos(self.mapToGlobal(QtCore.QPoint(x,y)))
+            self.cursor().setPos(self.mapToGlobal(QtCore.QPoint(x,y)))
 
-    def resultClicked(self, ev):
+    def resultClicked(self):
         # Wir müssen noch abfragen, ob schon eine Geste Trainiert wurde
         if len(self.points) > 0 and len(self.gestures) > 0:
             self.category = self.recognize(self.points, self.gestures)
@@ -257,7 +267,7 @@ class Window(QtWidgets.QWidget):
             self.resultOutputText.setText("no Gestures trained")
 
 
-    def addNewGesture(self, ev):
+    def addNewGesture(self):
         self.gestureInput.selectAll()
         self.gestureInput.setFocus()
         #if (sender.text() == self.addNewDefinedGetureButtonText) and (len(self.gestureInput.text()) > 0):
@@ -285,7 +295,7 @@ class Window(QtWidgets.QWidget):
 
 
 
-    def clickedButton(self, ev):
+    def clickedButton(self):
         #print("geklickt")
         #sender = self.sender()
         self.gestureInput.selectAll()
@@ -564,6 +574,7 @@ class Window(QtWidgets.QWidget):
 def main():
     app = QtWidgets.QApplication(sys.argv)
     #application = QtGui.QD
+    
     w = Window(app)
     sys.exit(app.exec_())
 
