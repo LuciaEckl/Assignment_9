@@ -14,7 +14,7 @@ from operator import itemgetter
 
 class Window(QtWidgets.QWidget):
 
-    def __init__(self):
+    def __init__(self, app):
         super().__init__()
         self.start_pos = (0, 0)
         self.mouseMovePos = (0, 0)
@@ -45,7 +45,19 @@ class Window(QtWidgets.QWidget):
         self.angle_range = 45
         self.angle_step = 2.0
         self.category = -1
+        self.wm = 0
+        self.checkDraw = False
+        self.app = app
+        self.resultButtonValues = []
+        self.addSymbolButtonValues = []
+        self.addGestureButtonValues = []
+        self.dropdownValue = []
         self.initUI()
+
+        try:
+            self.connect_wiimote()
+        except:
+            print("not connected To Wiimote")
 
 
 # making Boxlayouts within a boxlayout
@@ -90,8 +102,7 @@ class Window(QtWidgets.QWidget):
         self.addGestureLayout.addWidget(self.gestureInput)
 
         self.addGestureLayout.addWidget(self.addGestureButton)
-        self.addGestureButton.clicked.connect(self.clickedButton)
-
+        self.addGestureButton.clicked.connect(self.addNewGesture)
 
 
 
@@ -104,6 +115,25 @@ class Window(QtWidgets.QWidget):
         self.resultLayout.addWidget(self.resultOutputText)
         self.resultLayout.addWidget(self.resultButton)
         self.resultButton.clicked.connect(self.resultClicked)
+
+        self.addGestureButtonValues.append(self.addGestureButton.pos().x())
+        self.addGestureButtonValues.append(self.addGestureButton.pos().y())
+        self.addGestureButtonValues.append(self.addGestureButton.width())
+        self.addGestureButtonValues.append(self.addGestureButton.height())
+        self.addSymbolButtonValues.append(self.pushButton.pos().x())
+        self.addSymbolButtonValues.append(self.pushButton.pos().y())
+        self.addSymbolButtonValues.append(self.pushButton.width())
+        self.addSymbolButtonValues.append(self.pushButton.height())
+        self.resultButtonValues.append(self.resultButton.pos().x())
+        self.resultButtonValues.append(self.resultButton.pos().y())
+        self.resultButtonValues.append(self.resultButton.width())
+        self.resultButtonValues.append(self.resultButton.height())
+        self.dropdownValue.append(self.dropdown.pos().x())
+        self.dropdownValue.append(self.dropdown.pos().y())
+        self.dropdownValue.append(self.dropdown.width())
+        self.dropdownValue.append(self.dropdown.height())
+
+        print(self.addGestureButton.pos())
 
         self.addExamplelayout.setAlignment(QtCore.Qt.AlignBottom)
         self.addGestureLayout.setAlignment(QtCore.Qt.AlignBottom)
@@ -121,18 +151,12 @@ class Window(QtWidgets.QWidget):
         QtGui.QCursor.setPos(self.mapToGlobal(
             QtCore.QPoint(self.start_pos[0], self.start_pos[0])))
         self.show()
-        #self.initWiimote()
+
 
     def getTextFromDropdown(self):
         self.gestureInput.selectAll()
         self.gestureInput.setFocus()
 
-    def initWiimote(self):
-        super().__init__()
-        self.wm = None
-        self.setGeometry(0, 0, 1280, 720)
-        self.connect_wiimote()
-        #self.show()
 
 
     def connect_wiimote(self):
@@ -140,6 +164,63 @@ class Window(QtWidgets.QWidget):
 
         if self.wm is not None:
             self.wm.ir.register_callback(self.process_wiimote_ir_data)
+            self.wm.buttons.register_callback(self.getpressedButton)
+            #self.wm.buttons.unregister_callback(self.getReleasedButton)
+
+   # def getReleasedButton(self, ev):
+      #  if self.wm.buttons["B"]:
+
+
+
+    def getpressedButton(self, ev):
+        x = QtGui.QCursor.pos().x()
+        y = QtGui.QCursor.pos().y()
+        if self.wm.buttons["B"]:
+            if self.draw is False:
+                self.coordinates = []
+                self.update()
+                self.gestureInput.selectAll()
+                self.gestureInput.setFocus()
+            self.draw = True
+            if self.draw is True:
+
+                self.mouseMovePos = x, y
+                self.coordinates.append(self.mouseMovePos)
+                self.update()
+                self.checkDraw = True
+
+        else:
+            if len(self.coordinates) > 0 and self.checkDraw is True:
+                self.draw = False
+                self.points = self.resample(self.coordinates, self.pointNumber)
+                angle = self.indicativeAngle(self.points)
+                self.points = self.rotateBy(self.points, -angle)
+                self.points = self.scaleToSquare(self.points)
+                self.points = self.translateTo(self.points, self.origin)
+                self.points = self.points
+                self.update()
+                self.checkDraw = False
+
+        if self.wm.buttons["A"]:
+            print(x, self.resultButtonValues[0], self.resultButtonValues[2])
+           # self.addGestureButton.clicked.connect(self.clickedButton)
+            self.app.postEvent(self.addGestureButton, QtGui.QMouseEvent(QtGui.QMouseEvent.MouseButtonPress, QtCore.QPoint(x, y), QtCore.Qt.LeftButton, QtCore.Qt.NoButton, QtCore.Qt.NoModifier))
+            #self.resultButtonValues = []
+            #self.addSymbolButtonValues = []
+            #self.addGestureButtonValues = []
+            #self.dropdownValue = []
+            if x > self.resultButtonValues[0] and x < self.resultButtonValues[0] + self.resultButtonValues[2] and y > self.resultButtonValues[1] and y < self.resultButtonValues[1] + self.resultButtonValues[3]:
+                print("result")
+                self.resultClicked
+            if x > self.addSymbolButtonValues[0] and x < self.addSymbolButtonValues[0] + self.addSymbolButtonValues[2] and y > self.addSymbolButtonValues[1] and y < self.addSymbolButtonValues[1] + self.addSymbolButtonValues[3]:
+                print("addNewGesture")
+                self.pushButton
+            if x > self.addGestureButtonValues[0] and x < self.addGestureButtonValues[0] + self.addGestureButtonValues[2] and y > self.addGestureButtonValues[1] and y < self.addGestureButtonValues[1] + self.addGestureButtonValues[3]:
+                print("Symbol")
+                self.addNewGesture()
+
+               # QtGui.QCursor.setPos(self.mapToGlobal(QtCore.QPoint(x,y)))
+
 
     def process_wiimote_ir_data(self,event):
         if len(event) == 4:
@@ -148,6 +229,11 @@ class Window(QtWidgets.QWidget):
             for led in event:
                 leds.append((led["x"], led["y"]))
             P, DEST_W, DEST_H = (1024 /2, 768/2), 1024, 768
+
+        #while True:
+         #   if self.wm.buttons["B"]:
+          #      print("Gedrückt")
+
             try:
                 # x,y = Transform.projective_transform(P, leds, DEST_W, DEST_H)
 
@@ -164,38 +250,17 @@ class Window(QtWidgets.QWidget):
             self.category = self.recognize(self.points, self.gestures)
             self.category = sorted(self.category, key=itemgetter(0))[0][1]
             self.prediction()
-            print(self.category)
+           # print(self.category)
         elif len(self.points) == 0:
             self.resultOutputText.setText("no Gesture found")
         elif len(self.gestures) == 0:
             self.resultOutputText.setText("no Gestures trained")
 
 
-    def clickedButton(self, ev):
-        sender = self.sender()
+    def addNewGesture(self, ev):
         self.gestureInput.selectAll()
         self.gestureInput.setFocus()
-        if sender.text() == self.addExistingGestureButtonText:
-            # hier soll die Geste zu den bestehenden Kategrorien in der Dropdownliste Hinzugefügt werden
-            # aktueller Text der Dropdownliste self.dropdown.currentText()
-            # self.points ist das gekürzte Array
-           # print("Geste zu bestehender Kategorie hinzufügen", self.dropdown.currentText())
-            if self.dropdown.currentText() not in self.gestureName:
-                self.gestureName.append(self.dropdown.currentText())
-                self.gestures.append([self.points])
-            else:
-
-                index = self.gestureName.index(self.dropdown.currentText())
-
-                self.gestures[index].append(self.points)
-               # print("Index", index, self.gestures[index], len(self.gestures[index]), len(self.gestures))
-
-               # print(self.gestures, self.gestureName)
-
-
-
-
-        if (sender.text() == self.addNewDefinedGetureButtonText) and (len(self.gestureInput.text()) > 0):
+        #if (sender.text() == self.addNewDefinedGetureButtonText) and (len(self.gestureInput.text()) > 0):
             # die neu Erstellte Kategorie in die Dropdownliste hinzufügen
             # die neue Geste zu der neuen Kategorie anlegen
             #self.dropdown.addItem("Geschaft")
@@ -206,20 +271,49 @@ class Window(QtWidgets.QWidget):
           #  self.gestures.append([self.points])
            # print(self.gestures, "Gesten", "länge Gesten", len(self.gestures))
            # self.gestureName.append(self.gestureInput.text())
-            if self.gestureInput.text() not in self.gestureName:
-                self.gestureName.append(self.gestureInput.text())
-                self.gestures.append([self.points])
-                self.dropdown.addItem(self.gestureInput.text())
-            else:
+        if self.gestureInput.text() not in self.gestureName:
+            self.gestureName.append(self.gestureInput.text())
+            self.gestures.append([self.points])
+            self.dropdown.addItem(self.gestureInput.text())
+        else:
 
-                index = self.gestureName.index(self.gestureInput.text())
+            index = self.gestureName.index(self.gestureInput.text())
 
-                self.gestures[index].append(self.points)
-            #    print("Index", index, self.gestures[index], len(self.gestures[index]), len(self.gestures))
+            self.gestures[index].append(self.points)
+        #    print("Index", index, self.gestures[index], len(self.gestures[index]), len(self.gestures))
+
+
+
+
+    def clickedButton(self, ev):
+        #print("geklickt")
+        #sender = self.sender()
+        self.gestureInput.selectAll()
+        self.gestureInput.setFocus()
+        #if sender.text() == self.addExistingGestureButtonText:
+            # hier soll die Geste zu den bestehenden Kategrorien in der Dropdownliste Hinzugefügt werden
+            # aktueller Text der Dropdownliste self.dropdown.currentText()
+            # self.points ist das gekürzte Array
+           # print("Geste zu bestehender Kategorie hinzufügen", self.dropdown.currentText())
+        if self.dropdown.currentText() not in self.gestureName:
+            self.gestureName.append(self.dropdown.currentText())
+            self.gestures.append([self.points])
+        else:
+
+            index = self.gestureName.index(self.dropdown.currentText())
+
+            self.gestures[index].append(self.points)
+           # print("Index", index, self.gestures[index], len(self.gestures[index]), len(self.gestures))
+
+           # print(self.gestures, self.gestureName)
+
+
+
+
 
 
     def prediction(self):
-        print("predict")
+        #print("predict")
         result = self.gestureName[self.category]
         self.resultOutputText.setText(result)
 
@@ -292,7 +386,7 @@ class Window(QtWidgets.QWidget):
                 d = self.distanceAtBestAngle(points, templates[i][j], -self.angle_range, self.angle_range, self.angle_step)
                 if(d < b):
                     b = d
-                    print("D", d, i, j)
+                    #print("D", d, i, j)
                     resultArray.append([d, i])
 
         return resultArray
@@ -470,7 +564,7 @@ class Window(QtWidgets.QWidget):
 def main():
     app = QtWidgets.QApplication(sys.argv)
     #application = QtGui.QD
-    w = Window()
+    w = Window(app)
     sys.exit(app.exec_())
 
 if __name__ == '__main__':
